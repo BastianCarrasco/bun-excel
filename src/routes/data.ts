@@ -33,15 +33,45 @@ baseRoutes
         const limitRows = query.limitRows ?? null;
         const limitCols = query.limitCols ?? null;
 
-        const data = await parseCsvToObjectsFlexible(
+        const rawData = await parseCsvToObjectsFlexible(
           csvText,
           limitRows,
           limitCols
         );
-        console.log("Datos parseados y limitados:", data);
+        console.log("Datos parseados y limitados (formato original):", rawData);
+
+        let finalData: any[];
+
+        // --- INICIO DEL ARREGLO ---
+        // Verificar si 'rawData' es un objeto con claves numéricas
+        if (
+          typeof rawData === "object" &&
+          rawData !== null &&
+          !Array.isArray(rawData) &&
+          Object.keys(rawData).every((key) => !isNaN(Number(key)))
+        ) {
+          // Si es un objeto como { "0": {...}, "1": {...} }, convertirlo a un array
+          finalData = Object.values(rawData);
+          console.log("Datos transformados a array:", finalData);
+        } else if (Array.isArray(rawData)) {
+          // Si ya es un array, usarlo directamente
+          finalData = rawData;
+        } else {
+          // Si no es ni array ni objeto con claves numéricas, algo inesperado.
+          // Decide cómo quieres manejar esto:
+          // - Lanzar un error
+          // - Envolverlo en un array si es un solo objeto
+          // - Devolverlo tal cual y esperar que el cliente lo maneje (no recomendado)
+          console.warn(
+            "La data parseada no es un array ni un objeto con claves numéricas esperado:",
+            rawData
+          );
+          finalData = [rawData]; // Ejemplo: si es un objeto simple, lo convertimos en un array de un solo elemento
+        }
+        // --- FIN DEL ARREGLO ---
 
         set.headers["Access-Control-Allow-Origin"] = "*"; // CORS
-        return data;
+        return finalData; // Devolvemos el array transformado
       } catch (error: any) {
         console.error("Error EN EL SERVIDOR:", error);
         set.status = 500;
@@ -75,6 +105,8 @@ baseRoutes
           Recupera datos de la hoja de cálculo de Google publicada en formato CSV,
           convirtiéndolos a JSON. Permite limitar el número de filas y columnas devueltas.
           La estructura de los datos es flexible y depende de los encabezados de la hoja.
+
+          **Ahora devuelve un array de objetos JSON.**
 
           **Ejemplo:**
           - \`/data?limitRows=200\` para las primeras 200 filas.
