@@ -259,3 +259,67 @@ export function sumColumnValues(
   }
   return totalSum * 1000000; // Convertir a MM$ (millones de pesos)
 }
+
+// src/services/analysis.ts
+// ... (todas tus funciones existentes: normalizeName, UnifiedPeopleCounts, countUnifiedPeople,
+//      countColumnOccurrences, countUniqueColumnValues, sumColumnValues) ...
+
+// ========================================================================
+// countDistinctCombinations - Nueva función para contar combinaciones únicas de columnas
+// ========================================================================
+/**
+ * Cuenta el número de combinaciones únicas de valores en un conjunto de columnas.
+ * Los valores de cada columna se normalizan antes de formar la combinación.
+ *
+ * @param data Un array de objetos (registros de CSV).
+ * @param columns Un array de nombres de columnas cuyas combinaciones se desean contar.
+ * @param toLowercase Si es true, convierte los textos a minúsculas durante la normalización. Por defecto es true.
+ * @returns El número total de combinaciones únicas.
+ */
+export function countDistinctCombinations(
+  data: Record<string, any>[],
+  columns: string[],
+  toLowercase: boolean = true
+): number {
+  if (!data || data.length === 0 || !columns || columns.length === 0) {
+    return 0;
+  }
+
+  const uniqueCombinations = new Set<string>();
+
+  for (const row of data) {
+    let combinationParts: string[] = [];
+    let isValidRow = true;
+
+    for (const column of columns) {
+      if (Object.prototype.hasOwnProperty.call(row, column)) {
+        const cellValue = String(row[column]).trim();
+        if (!cellValue) {
+          // Si un valor de una de las columnas está vacío, esta combinación no es válida.
+          isValidRow = false;
+          break;
+        }
+        // Limpiar contenido entre paréntesis antes de normalizar para los nombres de proyectos
+        // NOTA: Si 'Fecha Postulación' tuviera paréntesis que no quieres limpiar,
+        // esto podría ser un problema. Asumimos que no. Si sí, habría que
+        // pasar una configuración más granular a normalizeName o aplicar la limpieza solo a ciertas columnas.
+        let cleanedValue = cellValue.replace(/\([^)]*\)/g, "").trim();
+        const normalizedValue = normalizeName(cleanedValue, toLowercase);
+        combinationParts.push(normalizedValue);
+      } else {
+        // Si una de las columnas no existe en la fila, esta combinación no es válida.
+        isValidRow = false;
+        break;
+      }
+    }
+
+    if (isValidRow && combinationParts.length === columns.length) {
+      // Unimos las partes normalizadas con un separador robusto que probablemente
+      // no aparezca en los nombres normalizados.
+      const uniqueKey = combinationParts.join(":::");
+      uniqueCombinations.add(uniqueKey);
+    }
+  }
+
+  return uniqueCombinations.size;
+}

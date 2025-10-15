@@ -7,6 +7,7 @@ import { statusRoutes } from "./routes/analysis/status";
 import { academicosRoutes } from "./routes/analysis/academicos";
 import { convocatoriasRoutes } from "./routes/analysis/convocatorias";
 import { montoRoutes } from "./routes/analysis/monto";
+import { proyectosRoutes } from "./routes/analysis/proyectos";
 
 const app = new Elysia()
   .use(swaggerPlugin)
@@ -18,6 +19,7 @@ const app = new Elysia()
       .use(academicosRoutes)
       .use(convocatoriasRoutes)
       .use(montoRoutes)
+      .use(proyectosRoutes)
   )
   .listen(3000, () => {
     console.log(`Elysia server running on http://localhost:3000`);
