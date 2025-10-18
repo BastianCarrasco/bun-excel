@@ -3,7 +3,8 @@ import { parse, CsvError } from "csv-parse";
 
 /**
  * Función flexible para parsear una cadena CSV a un array de objetos,
- * utilizando 'csv-parse' para un manejo robusto de comas y otros caracteres especiales.
+ * utilizando 'csv-parse' para un manejo robusto de comas y otros caracteres especiales,
+ * asumiendo que el delimitador es la coma (comportamiento por defecto de csv-parse).
  *
  * @param csv La cadena CSV a parsear.
  * @param maxRows El número máximo de filas a devolver (excluyendo el encabezado).
@@ -24,6 +25,7 @@ async function parseCsvToObjectsFlexible(
         columns: true,
         skip_empty_lines: true,
         trim: true,
+        // *** ELIMINAR ESTA LÍNEA: delimiter: '\t', ***
         on_record: (record: CsvRecord, { lines }) => {
           if (maxRows !== null && lines > maxRows + 1) {
             return null;
@@ -33,6 +35,12 @@ async function parseCsvToObjectsFlexible(
       },
       (err: CsvError | undefined, records: CsvRecord[]) => {
         if (err) {
+          // Mejorar el mensaje de error para incluir la entrada
+          console.error("Error parseando CSV:", err);
+          console.error(
+            "CSV problemático (primeras 500 chars):\n",
+            csv.substring(0, 500)
+          );
           return reject(err);
         }
 
@@ -63,10 +71,19 @@ async function parseCsvToObjectsFlexible(
           const newRow: Record<string, any> = {};
           for (const key in row) {
             if (Object.prototype.hasOwnProperty.call(row, key)) {
-              let value: string | number = row[key];
-              const numValue = parseFloat(value as string);
-              if (!isNaN(numValue) && (value as string).trim() !== "") {
-                value = numValue;
+              let value: string | number | null = row[key];
+
+              // Convertir valores de cadena vacía o solo espacios a null
+              if (typeof value === "string" && value.trim() === "") {
+                value = null;
+              }
+
+              // Intentar convertir a número solo si el valor no es null y es un string
+              if (typeof value === "string") {
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue)) {
+                  value = numValue;
+                }
               }
               newRow[key] = value;
             }
