@@ -214,50 +214,59 @@ export function countUniqueColumnValues(
  * @param column El nombre de la columna numérica a sumar.
  * @returns La suma total de los valores numéricos de la columna.
  */
+/**
+ * Suma todos los valores numéricos válidos de una columna de un array de objetos.
+ * Limpia formatos tipo “$ 8.737”, “8,737.50” o “1.234,56”.
+ *
+ * @param data Un array de objetos (registros CSV).
+ * @param column Nombre de la columna numérica a sumar.
+ * @returns La suma total como número (en MM$, sin multiplicar por millón).
+ */
 export function sumColumnValues(
   data: Record<string, any>[],
   column: string
 ): number {
-  let totalSum = 0;
-
   if (!data || data.length === 0) {
     return 0;
   }
 
+  let totalSum = 0;
+
   for (const row of data) {
-    if (Object.prototype.hasOwnProperty.call(row, column)) {
-      const cellValueRaw = String(row[column]); // Obtener el valor original como string
-      const cellValueTrimmed = cellValueRaw.trim();
+    if (!Object.prototype.hasOwnProperty.call(row, column)) continue;
 
-      if (cellValueTrimmed) {
-        // --- Lógica de limpieza mejorada aquí ---
-        let cleanedValue = cellValueTrimmed;
+    let value = String(row[column]).trim();
+    if (!value) continue;
 
-        // 1. Eliminar el símbolo de dólar o cualquier otro símbolo de moneda al inicio
-        //    y espacios.
-        cleanedValue = cleanedValue.replace(/^[$\s]+/, ""); // Elimina "$ ", " $ ", etc.
+    // 1️⃣ Eliminar símbolos de moneda, espacios y letras
+    value = value.replace(/[^0-9.,-]+/g, "");
 
-        // 2. Manejar separador de miles (el punto en este formato chileno/latam).
-        //    Simplemente lo eliminamos antes de parsear a float.
-        cleanedValue = cleanedValue.replace(/\./g, ""); // Elimina todos los puntos
+    // 2️⃣ Detectar si hay coma y punto para determinar separador decimal real
+    // Casos posibles:
+    //   "1.234,56" -> miles ".", decimal ","
+    //   "1,234.56" -> miles ",", decimal "."
+    //   "1234,56"  -> decimal ","
+    //   "1234.56"  -> decimal "."
+    if (value.match(/^\d{1,3}(\.\d{3})+(,\d+)?$/)) {
+      // Formato europeo/chileno → usar "," como decimal
+      value = value.replace(/\./g, "").replace(",", ".");
+    } else if (value.match(/^\d{1,3}(,\d{3})+(\.\d+)?$/)) {
+      // Formato americano → eliminar comas
+      value = value.replace(/,/g, "");
+    } else {
+      // Si sólo hay coma y parece decimal
+      value = value.replace(/,/g, ".");
+    }
 
-        // 3. Manejar el separador decimal (si fuera coma, lo cambiamos a punto para parseFloat)
-        //    Si el separador decimal en tu CSV es ',' y no '.', tendrías que hacer esto:
-        //    cleanedValue = cleanedValue.replace(/,/g, '.');
-
-        // Por tu ejemplo "$ 8.737", parece que no hay decimales y el punto es solo de miles.
-        // Si tuvieras "$ 8.737,50", entonces la línea de arriba sería necesaria.
-        // Dado que solo muestras enteros, con eliminar el punto de miles es suficiente.
-
-        const numValue = parseFloat(cleanedValue);
-
-        if (!isNaN(numValue)) {
-          totalSum = (totalSum as number) + numValue;
-        }
-      }
+    const num = parseFloat(value);
+    if (!isNaN(num)) {
+      totalSum += num;
     }
   }
-  return totalSum * 1000000; // Convertir a MM$ (millones de pesos)
+
+  // 🔹 NO multipliques aquí por 1e6 (ya está en millones)
+  // Si quisieras convertirlo a pesos chilenos, podrías hacerlo en la ruta.
+  return Number(totalSum.toFixed(2));
 }
 
 // src/services/analysis.ts

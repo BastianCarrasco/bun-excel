@@ -2,16 +2,14 @@
 import { parse, CsvError } from "csv-parse";
 
 /**
- * Función flexible para parsear una cadena CSV a un array de objetos,
- * utilizando 'csv-parse' para un manejo robusto de comas y otros caracteres especiales,
- * asumiendo que el delimitador es la coma (comportamiento por defecto de csv-parse).
+ * Convierte texto CSV en un array de objetos, interpretando las columnas automáticamente.
+ * Limpia valores vacíos y convierte números si es posible.
  *
- * @param csv La cadena CSV a parsear.
- * @param maxRows El número máximo de filas a devolver (excluyendo el encabezado).
- * @param maxCols El número máximo de columnas a devolver.
- * @returns Una promesa que resuelve en un array de objetos, donde cada objeto representa una fila.
+ * @param csv String con el contenido CSV.
+ * @param maxRows Máximo de filas a devolver.
+ * @param maxCols Máximo de columnas a devolver.
  */
-async function parseCsvToObjectsFlexible(
+export async function parseCsvToObjectsFlexible(
   csv: string,
   maxRows: number | null = null,
   maxCols: number | null = null
@@ -25,7 +23,6 @@ async function parseCsvToObjectsFlexible(
         columns: true,
         skip_empty_lines: true,
         trim: true,
-        // *** ELIMINAR ESTA LÍNEA: delimiter: '\t', ***
         on_record: (record: CsvRecord, { lines }) => {
           if (maxRows !== null && lines > maxRows + 1) {
             return null;
@@ -33,37 +30,46 @@ async function parseCsvToObjectsFlexible(
           return record;
         },
       },
-      (err: CsvError | undefined, records: CsvRecord[]) => {
+      (err: CsvError | undefined, records?: CsvRecord[]) => {
         if (err) {
-          // Mejorar el mensaje de error para incluir la entrada
           console.error("Error parseando CSV:", err);
           console.error(
-            "CSV problemático (primeras 500 chars):\n",
+            "CSV problemático (primeros 500 chars):\n",
             csv.substring(0, 500)
           );
           return reject(err);
         }
 
+        // ✅ Si no hay registros, resolvemos vacío
+        if (!records || records.length === 0) {
+          resolve([]);
+          return;
+        }
+
         let processedRecords: CsvRecord[] = records;
 
-        if (maxCols !== null && records.length > 0) {
-          const originalHeaders = Object.keys(records[0]);
-          if (maxCols < originalHeaders.length) {
-            const desiredHeaders = originalHeaders.slice(0, maxCols);
-            console.log(
-              `Limitando a ${maxCols} columnas. Nuevos encabezados:`,
-              desiredHeaders
-            );
+        // ✅ Solo leer headers si existe al menos un registro
+        if (maxCols !== null) {
+          const firstRecord = records[0];
+          if (firstRecord) {
+            const originalHeaders = Object.keys(firstRecord);
+            if (maxCols < originalHeaders.length) {
+              const desiredHeaders = originalHeaders.slice(0, maxCols);
+              console.log(
+                `Limitando a ${maxCols} columnas. Nuevos encabezados:`,
+                desiredHeaders
+              );
 
-            processedRecords = records.map((record) => {
-              const newRecord: Record<string, any> = {};
-              for (const header of desiredHeaders) {
-                if (record.hasOwnProperty(header)) {
-                  newRecord[header] = record[header];
+              processedRecords = records.map((record) => {
+                const newRecord: Record<string, any> = {};
+                for (const header of desiredHeaders) {
+                  if (Object.prototype.hasOwnProperty.call(record, header)) {
+                    newRecord[header] = record[header];
+                  }
                 }
-              }
-              return newRecord;
-            });
+                return newRecord;
+              });
+            }
           }
         }
 
@@ -71,21 +77,23 @@ async function parseCsvToObjectsFlexible(
           const newRow: Record<string, any> = {};
           for (const key in row) {
             if (Object.prototype.hasOwnProperty.call(row, key)) {
-              let value: string | number | null = row[key];
+              let value: string | number | null | undefined = row[key];
 
-              // Convertir valores de cadena vacía o solo espacios a null
-              if (typeof value === "string" && value.trim() === "") {
-                value = null;
-              }
-
-              // Intentar convertir a número solo si el valor no es null y es un string
               if (typeof value === "string") {
-                const numValue = parseFloat(value);
-                if (!isNaN(numValue)) {
-                  value = numValue;
-                }
+                value = value.trim();
+                if (value === "") value = null;
               }
-              newRow[key] = value;
+
+              // Intentar conversión a número si aplica
+              if (
+                typeof value === "string" &&
+                /^-?\d+([.,]\d+)?$/.test(value)
+              ) {
+                const parsed = parseFloat(value.replace(",", "."));
+                if (!isNaN(parsed)) value = parsed;
+              }
+
+              newRow[key] = value ?? null;
             }
           }
           return newRow;
@@ -96,5 +104,3 @@ async function parseCsvToObjectsFlexible(
     );
   });
 }
-
-export { parseCsvToObjectsFlexible };
