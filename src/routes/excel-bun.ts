@@ -1,61 +1,82 @@
 import { Elysia, t } from "elysia";
 import { connectToMongo } from "../services/mongo";
+import type { InsertOneResult, InsertManyResult } from "mongodb";
 
 export const excelBunRoutes = new Elysia({
   prefix: "/excel-bun",
-  detail: {
-    tags: ["MONGO-EXCEL"],
-  },
+  detail: { tags: ["MONGO-EXCEL"] },
 })
 
-  // 📘 GET: Obtener todos los documentos de EXCEL-BUN
-  .get(
-    "/",
-    async () => {
+  // 📘 GET
+  .get("/", async ({ set }) => {
+    try {
       const db = await connectToMongo();
       const data = await db.collection("EXCEL-BUN").find().toArray();
-      return data;
-    },
-    {
-      detail: {
-        summary: "Obtener todos los documentos de EXCEL-BUN",
-        description:
-          "Devuelve todos los documentos almacenados en la colección EXCEL-BUN.",
-      },
+      set.status = 200;
+      return data.length ? data : { message: "No hay documentos disponibles." };
+    } catch (err) {
+      set.status = 500;
+      console.error("❌ Error GET /excel-bun:", err);
+      return { error: "Error al obtener los documentos." };
     }
-  )
+  })
 
-  // ➕ POST: Insertar un documento en EXCEL-BUN
+  // ➕ POST
   .post(
     "/",
-    async ({ body }) => {
-      const db = await connectToMongo();
-      const result = await db.collection("EXCEL-BUN").insertOne(body);
-      return { insertedId: result.insertedId };
+    async ({ body, set }) => {
+      try {
+        const db = await connectToMongo();
+
+        if (Array.isArray(body)) {
+          const result: InsertManyResult<Document> = await db
+            .collection("EXCEL-BUN")
+            .insertMany(body);
+          set.status = 200;
+          return {
+            message: "Datos insertados correctamente (insertMany)",
+            count:
+              result.insertedCount ?? Object.keys(result.insertedIds).length,
+          };
+        } else {
+          const result: InsertOneResult<Document> = await db
+            .collection("EXCEL-BUN")
+            .insertOne(body);
+          set.status = 200;
+          return {
+            message: "Documento insertado correctamente (insertOne)",
+            insertedId: result.insertedId,
+          };
+        }
+      } catch (err) {
+        set.status = 500;
+        console.error("❌ Error POST /excel-bun:", err);
+        return { error: "Error al insertar el documento." };
+      }
     },
     {
-      body: t.Record(t.String(), t.Any()),
+      body: t.Any(),
       detail: {
-        summary: "Insertar un documento en EXCEL-BUN",
+        summary: "Insertar uno o varios documentos en EXCEL-BUN",
         description:
-          "Agrega un nuevo documento en la colección EXCEL-BUN. Acepta cualquier estructura JSON.",
+          "Inserta nuevos documentos en la colección EXCEL-BUN. Acepta cualquier estructura JSON.",
       },
     }
   )
 
-  // ❌ DELETE: Eliminar todos los documentos de EXCEL-BUN
-  .delete(
-    "/",
-    async () => {
+  // ❌ DELETE
+  .delete("/", async ({ set }) => {
+    try {
       const db = await connectToMongo();
       const result = await db.collection("EXCEL-BUN").deleteMany({});
-      return { deletedCount: result.deletedCount };
-    },
-    {
-      detail: {
-        summary: "Eliminar todos los documentos de EXCEL-BUN",
-        description:
-          "Elimina todos los registros de la colección EXCEL-BUN de la base de datos.",
-      },
+      set.status = 200;
+      return {
+        message: "Colección vaciada correctamente",
+        deletedCount: result.deletedCount,
+      };
+    } catch (err) {
+      set.status = 500;
+      console.error("❌ Error DELETE /excel-bun:", err);
+      return { error: "Error al eliminar los documentos." };
     }
-  );
+  });
