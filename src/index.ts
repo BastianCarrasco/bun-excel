@@ -22,10 +22,10 @@ const app = new Elysia()
   // --- CORS FIRST: se aplica antes de las rutas ---
   .use(
     cors({
-      origin: ({ request }) => {
-        const origin = request.headers.get("origin");
-        // true si está permitido, false si no
-        return origin && allowedOrigins.includes(origin);
+      origin: (req) => {
+        const origin = req.headers.get("origin");
+        // Solo aceptar si está dentro del array allowedOrigins
+        return allowedOrigins.includes(origin ?? "") ? origin : false;
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
