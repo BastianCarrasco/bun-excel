@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { swaggerPlugin } from "./plugins/swagger";
+import { cors } from "@elysiajs/cors"; // 👈 Importa el plugin
 
 import { baseRoutes } from "./routes/data";
 import { excelBunRoutes } from "./routes/excel-bun";
@@ -12,6 +13,13 @@ import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
 const app = new Elysia()
+  .use(
+    cors({
+      origin: "*", // 👈 Permite solicitudes desde cualquier origen
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    })
+  )
   .use(swaggerPlugin)
   .use(baseRoutes)
   .group("/data", (app) =>
