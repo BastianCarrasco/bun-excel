@@ -1,9 +1,10 @@
 import { Elysia } from "elysia";
-import { cors } from "@elysiajs/cors";
 import { swaggerPlugin } from "./plugins/swagger";
+import { cors } from "@elysiajs/cors";
 
 import { baseRoutes } from "./routes/data";
 import { excelBunRoutes } from "./routes/excel-bun";
+
 import { tematicasRoutes } from "./routes/analysis/tematicas";
 import { statusRoutes } from "./routes/analysis/status";
 import { academicosRoutes } from "./routes/analysis/academicos";
@@ -11,28 +12,25 @@ import { convocatoriasRoutes } from "./routes/analysis/convocatorias";
 import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
-// 🌐 Solo origen de producción
-const allowedOrigins = [
-  "https://editor-wallet-production.up.railway.app",
-  "https://bun-excel-production.up.railway.app",
-];
+// ✅ Solo origen de producción:
+const allowedOrigin = "https://editor-wallet-production.up.railway.app";
 
 const app = new Elysia()
-  // 🛡️ CORS configurado sin middleware global
+  // --- CORS FIRST: se aplica antes de las rutas ---
   .use(
     cors({
-      origin: (request: Request) => {
-        const origin = request.headers.get("origin");
-        if (!origin) return false;
-        return allowedOrigins.includes(origin); // ✅ solo tus dominios
+      origin: (req) => {
+        const origin = req.headers.get("origin");
+        // Solo aceptar el dominio de producción
+        return origin === allowedOrigin ? origin : false;
       },
-      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
     })
   )
 
-  // 🧩 Rutas y Swagger
+  // --- Swagger & rutas ---
   .use(swaggerPlugin)
   .use(baseRoutes)
   .group("/data", (app) =>
@@ -46,9 +44,9 @@ const app = new Elysia()
       .use(proyectosRoutes)
   )
 
-  // 🎯 Start
+  // --- Server listen ---
   .listen(3000, () => {
-    console.log("🚀 Servidor corriendo en producción (Railway)");
-    console.log("✅ CORS activo y controlado para orígenes específicos");
-    console.log("📘 Swagger UI: http://localhost:3000/swagger");
+    console.log("🚀 Servidor corriendo en PRODUCCIÓN (Railway)");
+    console.log("🌐 CORS permitido desde:", allowedOrigin);
+    console.log("📘 Swagger UI en http://localhost:3000/swagger");
   });
