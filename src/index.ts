@@ -13,13 +13,7 @@ import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
 const app = new Elysia()
-  .use(
-    cors({
-      origin: "*", // 👈 Permite solicitudes desde cualquier origen
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-    })
-  )
+  .use(cors())
   .use(swaggerPlugin)
   .use(baseRoutes)
   .group("/data", (app) =>
