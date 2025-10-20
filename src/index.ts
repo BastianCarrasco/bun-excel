@@ -4,7 +4,6 @@ import { cors } from "@elysiajs/cors";
 
 import { baseRoutes } from "./routes/data";
 import { excelBunRoutes } from "./routes/excel-bun";
-
 import { tematicasRoutes } from "./routes/analysis/tematicas";
 import { statusRoutes } from "./routes/analysis/status";
 import { academicosRoutes } from "./routes/analysis/academicos";
@@ -18,27 +17,43 @@ const allowedOrigins = [
   "https://bun-excel-production.up.railway.app",
 ];
 
-// 🧠 Lógica de validación de origen
+// 🧩 Permitir localhost solo en desarrollo
+if (process.env.NODE_ENV !== "production") {
+  allowedOrigins.push("http://localhost:5173");
+}
+
+// Helper para validar origen:
 function isAllowedOrigin(origin?: string | null) {
   if (!origin) return false;
   return allowedOrigins.includes(origin);
 }
 
-// 🚀 Inicializamos la app
 const app = new Elysia()
-  // --- CORS primero ---
+  // --- CORS: primero ---
   .use(
     cors({
-      origin: ({ request }) => {
-        const origin = request.headers.get("origin");
-        // Devuelve true solo si se permite este origin
-        return isAllowedOrigin(origin);
+      // ✳️ El parámetro de esta función es un Request nativo
+      origin: (req: Request) => {
+        const origin = req.headers.get("origin");
+        const allowed = isAllowedOrigin(origin);
+
+        console.log(
+          "🌍 Solicitud desde:",
+          origin,
+          "→",
+          allowed ? "✅ Permitido" : "❌ Bloqueado"
+        );
+
+        // ⚠️ Debe devolver boolean | void, no string
+        return allowed;
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     })
   )
+
+  // --- Plugins & rutas ---
   .use(swaggerPlugin)
   .use(baseRoutes)
   .group("/data", (app) =>
@@ -51,6 +66,8 @@ const app = new Elysia()
       .use(montoRoutes)
       .use(proyectosRoutes)
   )
+
+  // --- Server ---
   .listen(3000, () => {
     console.log("🚀 Servidor corriendo en PRODUCCIÓN (Railway)");
     console.log("🌐 CORS permitido desde:", allowedOrigins.join(", "));
