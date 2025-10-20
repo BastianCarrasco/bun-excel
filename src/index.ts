@@ -11,16 +11,16 @@ import { convocatoriasRoutes } from "./routes/analysis/convocatorias";
 import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
-// ✅ Solo origen de producción
+// 🌐 Solo tu dominio en producción
 const allowedOrigin = "https://editor-wallet-production.up.railway.app";
 
 const app = new Elysia()
-  // --- CORS primero ---
+  // 🔹 CORS al principio
   .use(
     cors({
-      origin: (req: Request) => {
+      origin: (req) => {
         const origin = req.headers.get("origin");
-        return origin === allowedOrigin; // 👉 true si permitido, false si no
+        return origin === allowedOrigin ? origin : false;
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -28,26 +28,27 @@ const app = new Elysia()
     })
   )
 
-  // --- Middleware para manejar manualmente OPTIONS ---
+  // 🚀 Middleware global para forzar respuesta OPTIONS + cabeceras CORS
   .all("*", ({ request, set }) => {
     if (request.method === "OPTIONS") {
       const origin = request.headers.get("origin");
+      // ⚠️ Solo responder si el origen está permitido
       if (origin === allowedOrigin) {
         set.headers["Access-Control-Allow-Origin"] = origin;
-        set.headers["Access-Control-Allow-Methods"] =
-          "GET,POST,DELETE,PUT,OPTIONS";
+        set.headers["Access-Control-Allow-Methods"] = "GET,POST,DELETE,OPTIONS";
         set.headers["Access-Control-Allow-Headers"] =
           "Content-Type,Authorization";
         set.headers["Access-Control-Allow-Credentials"] = "true";
         set.status = 200;
-        return { message: "CORS preflight OK" };
+        return Response.json({ ok: true });
       }
+      // Origen no permitido → responde sin CORS
       set.status = 403;
-      return { error: "Origen no permitido" };
+      return Response.json({ error: "Origen no autorizado" });
     }
   })
 
-  // --- Swagger y rutas ---
+  // 🔹 Swagger y rutas
   .use(swaggerPlugin)
   .use(baseRoutes)
   .group("/data", (app) =>
@@ -61,9 +62,9 @@ const app = new Elysia()
       .use(proyectosRoutes)
   )
 
-  // --- Arranque ---
+  // 🔹 Start server
   .listen(3000, () => {
-    console.log("🚀 Servidor corriendo en Railway (producción)");
-    console.log("✅ CORS permitido desde:", allowedOrigin);
-    console.log("📘 Swagger: http://localhost:3000/swagger");
+    console.log("\n🚀 Servidor corriendo en PRODUCCIÓN (Railway)");
+    console.log("✅ CORS permitido para:", allowedOrigin);
+    console.log("📘 Swagger UI: http://localhost:3000/swagger\n");
   });
