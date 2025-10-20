@@ -12,34 +12,33 @@ import { convocatoriasRoutes } from "./routes/analysis/convocatorias";
 import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
-// ✅ Orígenes permitidos en producción
+// ✅ Dominios permitidos
 const allowedOrigins = [
   "https://editor-wallet-production.up.railway.app",
   "https://bun-excel-production.up.railway.app",
 ];
 
-// 🚀 Inicialización del servidor
+// 🧠 Lógica de validación de origen
+function isAllowedOrigin(origin?: string | null) {
+  if (!origin) return false;
+  return allowedOrigins.includes(origin);
+}
+
+// 🚀 Inicializamos la app
 const app = new Elysia()
-  // --- CORS (debe ir antes que las rutas) ---
+  // --- CORS primero ---
   .use(
     cors({
       origin: ({ request }) => {
         const origin = request.headers.get("origin");
-        // Solo aceptar si el origen está en la lista
-        if (origin && allowedOrigins.includes(origin)) {
-          // Esto hace que la cabecera Access-Control-Allow-Origin = origin
-          request.headers.set("Origin", origin);
-          return true;
-        }
-        return false;
+        // Devuelve true solo si se permite este origin
+        return isAllowedOrigin(origin);
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     })
   )
-
-  // --- Swagger & rutas ---
   .use(swaggerPlugin)
   .use(baseRoutes)
   .group("/data", (app) =>
@@ -52,8 +51,6 @@ const app = new Elysia()
       .use(montoRoutes)
       .use(proyectosRoutes)
   )
-
-  // --- Server listen ---
   .listen(3000, () => {
     console.log("🚀 Servidor corriendo en PRODUCCIÓN (Railway)");
     console.log("🌐 CORS permitido desde:", allowedOrigins.join(", "));
