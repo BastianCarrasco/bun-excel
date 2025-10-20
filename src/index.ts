@@ -1,10 +1,9 @@
 import { Elysia } from "elysia";
-import { swaggerPlugin } from "./plugins/swagger";
 import { cors } from "@elysiajs/cors";
+import { swaggerPlugin } from "./plugins/swagger";
 
 import { baseRoutes } from "./routes/data";
 import { excelBunRoutes } from "./routes/excel-bun";
-
 import { tematicasRoutes } from "./routes/analysis/tematicas";
 import { statusRoutes } from "./routes/analysis/status";
 import { academicosRoutes } from "./routes/analysis/academicos";
@@ -12,7 +11,7 @@ import { convocatoriasRoutes } from "./routes/analysis/convocatorias";
 import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
-// Orígenes permitidos (solo estos dos)
+// Lista estricta de orígenes permitidos
 const allowedOrigins = [
   "http://localhost:5173",
   "https://editor-wallet-production.up.railway.app",
@@ -23,12 +22,17 @@ const app = new Elysia()
     cors({
       origin: (req) => {
         const origin = req.headers.get("origin");
-        if (!origin) return false;
-        return allowedOrigins.includes(origin);
+        const valid = origin && allowedOrigins.includes(origin);
+        if (valid) {
+          // 🔹 Devuelve explícitamente el origen permitido
+          return origin;
+        }
+        // 🚫 Bloquea todo lo demás
+        return false;
       },
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"],
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     })
   )
   .use(swaggerPlugin)
@@ -45,5 +49,5 @@ const app = new Elysia()
   )
   .listen(3000, () => {
     console.log("🚀 Servidor corriendo en http://localhost:3000");
-    console.log("📘 Swagger UI disponible en http://localhost:3000/swagger");
+    console.log("📘 Swagger disponible en http://localhost:3000/swagger");
   });
