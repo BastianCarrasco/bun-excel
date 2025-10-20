@@ -12,20 +12,26 @@ import { convocatoriasRoutes } from "./routes/analysis/convocatorias";
 import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
-// ✅ Orígenes permitidos en producción:
+// ✅ Orígenes permitidos en producción
 const allowedOrigins = [
   "https://editor-wallet-production.up.railway.app",
   "https://bun-excel-production.up.railway.app",
 ];
 
+// 🚀 Inicialización del servidor
 const app = new Elysia()
-  // --- CORS FIRST: se aplica antes de las rutas ---
+  // --- CORS (debe ir antes que las rutas) ---
   .use(
     cors({
-      origin: (req) => {
-        const origin = req.headers.get("origin");
-        // Solo aceptar si está dentro del array allowedOrigins
-        return allowedOrigins.includes(origin ?? "");
+      origin: ({ request }) => {
+        const origin = request.headers.get("origin");
+        // Solo aceptar si el origen está en la lista
+        if (origin && allowedOrigins.includes(origin)) {
+          // Esto hace que la cabecera Access-Control-Allow-Origin = origin
+          request.headers.set("Origin", origin);
+          return true;
+        }
+        return false;
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
