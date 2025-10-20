@@ -11,37 +11,28 @@ import { convocatoriasRoutes } from "./routes/analysis/convocatorias";
 import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
-const app = new Elysia()
+// 🌐 Solo origen de producción
+const allowedOrigins = [
+  "https://editor-wallet-production.up.railway.app",
+  "https://bun-excel-production.up.railway.app",
+];
 
-  // 🌍 CORS global completamente abierto pero válido (maneja credentials)
+const app = new Elysia()
+  // 🛡️ CORS configurado sin middleware global
   .use(
     cors({
-      origin: true, // Permite todos los orígenes válidos (no devuelve "*", sino el que hizo la request)
-      credentials: true,
+      origin: (request: Request) => {
+        const origin = request.headers.get("origin");
+        if (!origin) return false;
+        return allowedOrigins.includes(origin); // ✅ solo tus dominios
+      },
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
     })
   )
 
-  // 🔧 Middleware para responder manualmente las peticiones OPTIONS
-  // Esto fuerza un 200 con CORS headers (Railway a veces quita los headers en 204)
-  .all("*", ({ request, set }) => {
-    if (request.method === "OPTIONS") {
-      const origin = request.headers.get("origin") || "*";
-
-      set.headers["Access-Control-Allow-Origin"] = origin;
-      set.headers["Access-Control-Allow-Methods"] =
-        "GET,POST,PUT,DELETE,PATCH,OPTIONS";
-      set.headers["Access-Control-Allow-Headers"] =
-        "Content-Type,Authorization";
-      set.headers["Access-Control-Allow-Credentials"] = "true";
-
-      set.status = 200; // evita el 204 problemático
-      return { ok: true };
-    }
-  })
-
-  // 📘 Swagger y rutas principales
+  // 🧩 Rutas y Swagger
   .use(swaggerPlugin)
   .use(baseRoutes)
   .group("/data", (app) =>
@@ -55,9 +46,9 @@ const app = new Elysia()
       .use(proyectosRoutes)
   )
 
-  // 🧭 Inicio
+  // 🎯 Start
   .listen(3000, () => {
-    console.log("🚀 Backend corriendo en Railway (producción)");
-    console.log("✅ CORS habilitado globalmente (all origins)");
-    console.log("📘 Swagger UI disponible en /swagger");
+    console.log("🚀 Servidor corriendo en producción (Railway)");
+    console.log("✅ CORS activo y controlado para orígenes específicos");
+    console.log("📘 Swagger UI: http://localhost:3000/swagger");
   });
