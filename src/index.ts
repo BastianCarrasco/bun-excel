@@ -4,6 +4,7 @@ import { cors } from "@elysiajs/cors";
 
 import { baseRoutes } from "./routes/data";
 import { excelBunRoutes } from "./routes/excel-bun";
+
 import { tematicasRoutes } from "./routes/analysis/tematicas";
 import { statusRoutes } from "./routes/analysis/status";
 import { academicosRoutes } from "./routes/analysis/academicos";
@@ -11,41 +12,17 @@ import { convocatoriasRoutes } from "./routes/analysis/convocatorias";
 import { montoRoutes } from "./routes/analysis/monto";
 import { proyectosRoutes } from "./routes/analysis/proyectos";
 
-// ✅ Dominios permitidos
-const allowedOrigins = [
-  "https://editor-wallet-production.up.railway.app",
-  "https://bun-excel-production.up.railway.app",
-];
-
-// 🧩 Permitir localhost solo en desarrollo
-if (process.env.NODE_ENV !== "production") {
-  allowedOrigins.push("http://localhost:5173");
-}
-
-// Helper para validar origen:
-function isAllowedOrigin(origin?: string | null) {
-  if (!origin) return false;
-  return allowedOrigins.includes(origin);
-}
+// ✅ Orígenes permitidos en producción:
+const allowedOrigins = ["https://editor-wallet-production.up.railway.app"];
 
 const app = new Elysia()
-  // --- CORS: primero ---
+  // --- CORS FIRST: se aplica antes de las rutas ---
   .use(
     cors({
-      // ✳️ El parámetro de esta función es un Request nativo
-      origin: (req: Request) => {
+      origin: (req) => {
         const origin = req.headers.get("origin");
-        const allowed = isAllowedOrigin(origin);
-
-        console.log(
-          "🌍 Solicitud desde:",
-          origin,
-          "→",
-          allowed ? "✅ Permitido" : "❌ Bloqueado"
-        );
-
-        // ⚠️ Debe devolver boolean | void, no string
-        return allowed;
+        // Solo aceptar si está dentro del array allowedOrigins
+        return allowedOrigins.includes(origin ?? "") ? origin : false;
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -53,7 +30,7 @@ const app = new Elysia()
     })
   )
 
-  // --- Plugins & rutas ---
+  // --- Swagger & rutas ---
   .use(swaggerPlugin)
   .use(baseRoutes)
   .group("/data", (app) =>
@@ -67,7 +44,7 @@ const app = new Elysia()
       .use(proyectosRoutes)
   )
 
-  // --- Server ---
+  // --- Server listen ---
   .listen(3000, () => {
     console.log("🚀 Servidor corriendo en PRODUCCIÓN (Railway)");
     console.log("🌐 CORS permitido desde:", allowedOrigins.join(", "));
