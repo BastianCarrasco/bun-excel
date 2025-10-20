@@ -25,7 +25,7 @@ const app = new Elysia()
       origin: (req) => {
         const origin = req.headers.get("origin");
         // Solo aceptar si está dentro del array allowedOrigins
-        return allowedOrigins.includes(origin ?? "") ? origin : false;
+        return allowedOrigins.includes(origin ?? "");
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
