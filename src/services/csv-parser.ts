@@ -23,6 +23,8 @@ export async function parseCsvToObjectsFlexible(
         columns: true,
         skip_empty_lines: true,
         trim: true,
+        delimiter: ",", // Especifica explícitamente la coma como delimitador
+        quote: '"', // Especifica las comillas dobles como carácter de quote
         on_record: (record: CsvRecord, { lines }) => {
           if (maxRows !== null && lines > maxRows + 1) {
             return null;
