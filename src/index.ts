@@ -4,6 +4,7 @@ import { cors } from "@elysiajs/cors";
 
 import { baseRoutes } from "./routes/data";
 import { excelBunRoutes } from "./routes/excel-bun";
+import { fondosRoutes } from "./routes/fondos";
 
 import { tematicasRoutes } from "./routes/analysis/tematicas";
 import { statusRoutes } from "./routes/analysis/status";
@@ -33,6 +34,7 @@ const app = new Elysia()
   // --- Swagger & rutas ---
   .use(swaggerPlugin)
   .use(baseRoutes)
+  .use(fondosRoutes)
   .group("/data", (app) =>
     app
       .use(excelBunRoutes)
